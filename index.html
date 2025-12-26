@@ -74,11 +74,10 @@
             text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
         }
         
-        /* ОСНОВНОЕ ИЗМЕНЕНИЕ: простая статичная картинка */
+        /* СТАТИЧНАЯ КАРТИНКА КАНЭКИ */
         .kaneki {
             width: 200px;
             height: 200px;
-            /* СТАТИЧНАЯ КАРТИНКА КАНЭКИ */
             background: url(OIP.jpeg) center center / contain no-repeat;
             border-radius: 50%;
             margin: 0 auto;
@@ -97,6 +96,36 @@
             box-shadow: 
                 0 5px 15px rgba(255, 107, 107, 0.3),
                 inset 0 -3px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* БЛОК ДЛЯ ЗАГРУЗКИ СОХРАНЕНИЯ (НОВОЕ) */
+        .load-save {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .load-save h3 {
+            margin-bottom: 15px;
+            color: #4CAF50;
+            font-size: 18px;
+        }
+        
+        .load-input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 2px solid #4CAF50;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .load-input::placeholder {
+            color: #666;
         }
         
         .click-effect {
@@ -163,6 +192,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: opacity 0.3s;
         }
         
         .footer {
@@ -194,6 +224,11 @@
             .stat-value {
                 font-size: 30px;
             }
+            
+            button {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -217,9 +252,19 @@
             <!-- Элемент с картинкой Канэки -->
             <div class="kaneki" id="kaneki"></div>
             
-            <div class="controls">
-                <button onclick="resetGame()">🔄 Сбросить</button>
-                <button class="save" onclick="saveGame()">💾 Сохранить</button>
+            <!-- БЛОК ДЛЯ ЗАГРУЗКИ СОХРАНЕНИЯ (НОВОЕ) -->
+            <div class="load-save">
+                <h3>💾 Загрузить сохранение из бота</h3>
+                <input type="text" class="load-input" id="loadProgress" 
+                       placeholder="Введи: клики,уровень (например: 1500,15)">
+                <div class="controls">
+                    <button onclick="loadSavedProgress()" style="background: linear-gradient(45deg, #4CAF50, #2E7D32);">
+                        📥 Загрузить прогресс
+                    </button>
+                    <button onclick="saveGame()" class="save">
+                        💾 Сохранить в боте
+                    </button>
+                </div>
             </div>
             
             <div class="message" id="message">
@@ -267,7 +312,6 @@
             if (newLevel > level) {
                 level = newLevel;
                 showMessage(`🎉 НОВЫЙ УРОВЕНЬ ${level}!`);
-                // УБРАНО: изменение цвета картинки
             }
             
             // Обновляем текст кнопки
@@ -322,7 +366,7 @@
             }
         }
         
-        // Сохранение игры
+        // СОХРАНЕНИЕ ИГРЫ В БОТА (ОТПРАВКА ДАННЫХ В БОТ)
         function saveGame() {
             const gameData = {
                 action: 'save_game',
@@ -331,12 +375,70 @@
                 timestamp: Date.now()
             };
             
+            // Отправляем данные в бота
             tg.sendData(JSON.stringify(gameData));
-            showMessage('✅ Игра сохранена!');
             
+            showMessage('✅ Игра отправлена на сохранение!');
+            showMessage('💾 Вернись в бота, чтобы подтвердить сохранение');
+            
+            // Закрываем Web App через 2 секунды
             setTimeout(() => {
                 tg.close();
-            }, 1000);
+            }, 2000);
+        }
+        
+        // ЗАГРУЗКА СОХРАНЁННОГО ПРОГРЕССА (НОВАЯ ФУНКЦИЯ)
+        function loadSavedProgress() {
+            const input = document.getElementById('loadProgress').value.trim();
+            
+            if (!input) {
+                showMessage('⚠️ Введи сохранённый прогресс!');
+                return;
+            }
+            
+            try {
+                // Парсим ввод: "1500,15" или "1500" или "1500к"
+                let cleanInput = input.replace(/\s+/g, '');
+                
+                // Убираем "к" если есть
+                if (cleanInput.toLowerCase().endsWith('к')) {
+                    cleanInput = cleanInput.slice(0, -1);
+                }
+                
+                // Разделяем по запятой
+                const parts = cleanInput.split(',');
+                
+                if (parts.length === 0) {
+                    showMessage('⚠️ Неверный формат!');
+                    return;
+                }
+                
+                // Преобразуем в числа
+                const newClicks = parseInt(parts[0]) || 0;
+                const newLevel = parseInt(parts[1]) || 1;
+                
+                if (newClicks < 0 || newLevel < 1) {
+                    showMessage('⚠️ Числа должны быть положительными!');
+                    return;
+                }
+                
+                // Устанавливаем новые значения
+                clicks = newClicks;
+                level = newLevel;
+                
+                // Обновляем отображение
+                updateDisplay();
+                
+                // Показываем сообщение
+                showMessage(`✅ Прогресс загружен! ${clicks} кликов, уровень ${level}`);
+                
+                // Очищаем поле ввода
+                document.getElementById('loadProgress').value = '';
+                
+            } catch (error) {
+                console.error('Ошибка загрузки прогресса:', error);
+                showMessage('⚠️ Ошибка! Используй формат: 1500,15');
+            }
         }
         
         // Сброс игры
@@ -347,7 +449,6 @@
                 clickMultiplier = 1;
                 updateDisplay();
                 showMessage('🔄 Игра сброшена!');
-                // УБРАНО: сброс цвета картинки
             }
         }
         
@@ -364,26 +465,27 @@
             handleKanekiClick(fakeMouseEvent);
         }, { passive: false });
         
+        // Привязываем сохранение к основной кнопке Telegram
         tg.MainButton.onClick(saveGame);
         
-        // ========== ЗАГРУЗКА СОХРАНЕНИЙ ==========
-        function loadSavedGame() {
+        // ========== ЗАГРУЗКА ИЗ ЛОКАЛЬНОГО ХРАНИЛИЩА ==========
+        function loadFromLocalStorage() {
             const saved = localStorage.getItem('kaneki_tap_save');
             if (saved) {
                 try {
                     const data = JSON.parse(saved);
                     clicks = data.clicks || 0;
                     level = data.level || 1;
-                    showMessage('🔄 Загружено сохранение');
+                    showMessage('🔄 Загружено локальное сохранение');
                 } catch (e) {
-                    console.error('Ошибка загрузки:', e);
+                    console.error('Ошибка загрузки из localStorage:', e);
                 }
             }
             
             updateDisplay();
         }
         
-        // Автосохранение
+        // Сохранение в локальное хранилище каждые 30 секунд
         setInterval(() => {
             localStorage.setItem('kaneki_tap_save', JSON.stringify({
                 clicks: clicks,
@@ -394,24 +496,40 @@
         
         // ========== ЗАПУСК ИГРЫ ==========
         document.addEventListener('DOMContentLoaded', function() {
-            loadSavedGame();
+            // Загружаем из localStorage
+            loadFromLocalStorage();
+            
+            // Показываем приветственное сообщение
             showMessage('👆 Тапай по Канэки!');
             
+            // Инструкция по сохранению
+            setTimeout(() => {
+                showMessage('💾 Чтобы сохранить: нажми кнопку "Сохранить в боте"');
+            }, 5000);
+            
+            // CSS анимация пульсации
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes pulse {
+                    0% { box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4); }
+                    50% { box-shadow: 0 10px 40px rgba(255, 107, 107, 0.7); }
+                    100% { box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Запускаем анимацию пульсации
             setTimeout(() => {
                 kanekiEl.style.animation = 'pulse 2s infinite';
             }, 1000);
         });
         
-        // CSS анимация пульсации
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes pulse {
-                0% { box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4); }
-                50% { box-shadow: 0 10px 40px rgba(255, 107, 107, 0.7); }
-                100% { box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4); }
+        // Обработка нажатия Enter в поле ввода
+        document.getElementById('loadProgress').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                loadSavedProgress();
             }
-        `;
-        document.head.appendChild(style);
+        });
     </script>
 </body>
 </html>
