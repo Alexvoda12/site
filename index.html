@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaneki Tap Game</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 400px;
+            width: 100%;
+            padding: 20px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            color: #aaa;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .game-area {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: 30px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 25px;
+            font-size: 18px;
+        }
+        
+        .stat-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 15px;
+            min-width: 120px;
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+        }
+        
+        /* ОСНОВНОЕ ИЗМЕНЕНИЕ: простая статичная картинка */
+        .kaneki {
+            width: 200px;
+            height: 200px;
+            /* СТАТИЧНАЯ КАРТИНКА КАНЭКИ */
+            background: url(OIP.jpeg) center center / contain no-repeat;
+            border-radius: 50%;
+            margin: 0 auto;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s;
+            box-shadow: 
+                0 10px 30px rgba(255, 107, 107, 0.4),
+                inset 0 -5px 20px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .kaneki:active {
+            transform: scale(0.92);
+            box-shadow: 
+                0 5px 15px rgba(255, 107, 107, 0.3),
+                inset 0 -3px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .click-effect {
+            position: absolute;
+            pointer-events: none;
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+            animation: floatUp 1s forwards;
+            z-index: 100;
+        }
+        
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100px) scale(1.5);
+            }
+        }
+        
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #4ECDC4, #44A08D);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            max-width: 180px;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(78, 205, 196, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button.save {
+            background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+        }
+        
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            color: #888;
+            font-size: 14px;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 28px;
+            }
+            
+            .kaneki {
+                width: 180px;
+                height: 180px;
+            }
+            
+            .stat-box {
+                padding: 12px;
+                min-width: 100px;
+            }
+            
+            .stat-value {
+                font-size: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 ТАПАЛКА КАНЭКИ</h1>
+        <div class="subtitle">Тапай по Канэки, повышай уровень!</div>
+        
+        <div class="game-area">
+            <div class="stats">
+                <div class="stat-box">
+                    <div>УРОВЕНЬ</div>
+                    <div class="stat-value" id="level">1</div>
+                </div>
+                <div class="stat-box">
+                    <div>КЛИКОВ</div>
+                    <div class="stat-value" id="clicks">0</div>
+                </div>
+            </div>
+            
+            <!-- Элемент с картинкой Канэки -->
+            <div class="kaneki" id="kaneki"></div>
+            
+            <div class="controls">
+                <button onclick="resetGame()">🔄 Сбросить</button>
+                <button class="save" onclick="saveGame()">💾 Сохранить</button>
+            </div>
+            
+            <div class="message" id="message">
+                Нажми на Канэки чтобы начать!
+            </div>
+        </div>
+        
+        <div class="footer">
+            Игра работает через Telegram Web App
+        </div>
+    </div>
+
+    <script>
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
+        const tg = window.Telegram.WebApp;
+        
+        // Инициализация Telegram Web App
+        tg.expand();
+        tg.enableClosingConfirmation();
+        
+        // Настраиваем основную кнопку
+        tg.MainButton.setText('💾 СОХРАНИТЬ ИГРУ');
+        tg.MainButton.show();
+        
+        // ========== ИГРОВЫЕ ДАННЫЕ ==========
+        let clicks = 0;
+        let level = 1;
+        let clickMultiplier = 1;
+        
+        // ========== ЭЛЕМЕНТЫ DOM ==========
+        const kanekiEl = document.getElementById('kaneki');
+        const clicksEl = document.getElementById('clicks');
+        const levelEl = document.getElementById('level');
+        const messageEl = document.getElementById('message');
+        
+        // ========== ФУНКЦИИ ==========
+        
+        // Обновление отображения
+        function updateDisplay() {
+            clicksEl.textContent = clicks.toLocaleString();
+            levelEl.textContent = level;
+            
+            // Проверка на новый уровень (каждые 10 кликов)
+            const newLevel = Math.floor(clicks / 10) + 1;
+            if (newLevel > level) {
+                level = newLevel;
+                showMessage(`🎉 НОВЫЙ УРОВЕНЬ ${level}!`);
+                // УБРАНО: изменение цвета картинки
+            }
+            
+            // Обновляем текст кнопки
+            tg.MainButton.setText(`💾 СОХРАНИТЬ (${clicks})`);
+        }
+        
+        // Показ сообщений
+        function showMessage(text) {
+            messageEl.textContent = text;
+            messageEl.style.opacity = '1';
+            
+            setTimeout(() => {
+                messageEl.style.opacity = '0.7';
+            }, 2000);
+        }
+        
+        // Создание эффекта клика
+        function createClickEffect(x, y) {
+            const effect = document.createElement('div');
+            effect.className = 'click-effect';
+            effect.textContent = `+${clickMultiplier}`;
+            effect.style.left = `${x}px`;
+            effect.style.top = `${y}px`;
+            
+            document.querySelector('.game-area').appendChild(effect);
+            
+            setTimeout(() => {
+                effect.remove();
+            }, 1000);
+        }
+        
+        // Обработка клика по Канэки
+        function handleKanekiClick(event) {
+            const rect = kanekiEl.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            clicks += clickMultiplier;
+            createClickEffect(x, y);
+            
+            // Анимация нажатия
+            kanekiEl.style.transform = 'scale(0.92)';
+            setTimeout(() => {
+                kanekiEl.style.transform = 'scale(1)';
+            }, 100);
+            
+            updateDisplay();
+            
+            // Вибрация
+            if (navigator.vibrate) {
+                navigator.vibrate(30);
+            }
+        }
+        
+        // Сохранение игры
+        function saveGame() {
+            const gameData = {
+                action: 'save_game',
+                clicks: clicks,
+                level: level,
+                timestamp: Date.now()
+            };
+            
+            tg.sendData(JSON.stringify(gameData));
+            showMessage('✅ Игра сохранена!');
+            
+            setTimeout(() => {
+                tg.close();
+            }, 1000);
+        }
+        
+        // Сброс игры
+        function resetGame() {
+            if (confirm('Сбросить всю прогрессию?')) {
+                clicks = 0;
+                level = 1;
+                clickMultiplier = 1;
+                updateDisplay();
+                showMessage('🔄 Игра сброшена!');
+                // УБРАНО: сброс цвета картинки
+            }
+        }
+        
+        // ========== НАСТРОЙКА СЛУШАТЕЛЕЙ ==========
+        kanekiEl.addEventListener('click', handleKanekiClick);
+        
+        kanekiEl.addEventListener('touchstart', function(event) {
+            event.preventDefault();
+            const touch = event.touches[0];
+            const fakeMouseEvent = new MouseEvent('click', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            handleKanekiClick(fakeMouseEvent);
+        }, { passive: false });
+        
+        tg.MainButton.onClick(saveGame);
+        
+        // ========== ЗАГРУЗКА СОХРАНЕНИЙ ==========
+        function loadSavedGame() {
+            const saved = localStorage.getItem('kaneki_tap_save');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    clicks = data.clicks || 0;
+                    level = data.level || 1;
+                    showMessage('🔄 Загружено сохранение');
+                } catch (e) {
+                    console.error('Ошибка загрузки:', e);
+                }
+            }
+            
+            updateDisplay();
+        }
+        
+        // Автосохранение
+        setInterval(() => {
+            localStorage.setItem('kaneki_tap_save', JSON.stringify({
+                clicks: clicks,
+                level: level,
+                savedAt: Date.now()
+            }));
+        }, 30000);
+        
+        // ========== ЗАПУСК ИГРЫ ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSavedGame();
+            showMessage('👆 Тапай по Канэки!');
+            
+            setTimeout(() => {
+                kanekiEl.style.animation = 'pulse 2s infinite';
+            }, 1000);
+        });
+        
+        // CSS анимация пульсации
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0% { box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4); }
+                50% { box-shadow: 0 10px 40px rgba(255, 107, 107, 0.7); }
+                100% { box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
